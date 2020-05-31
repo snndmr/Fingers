@@ -58,7 +58,6 @@ void readAndExtractFeatures(const char *folderPath, vector<float> &data, vector<
 			data.push_back(features[i][0]);
 			data.push_back(features[i][1]);
 			dataResponse.push_back(fileNames[imageIndex][fileNames[imageIndex].size() - 6]);
-			//cout << features[i][0] << " " << features[i][1] << " " << fileNames[imageIndex][fileNames[imageIndex].size() - 6] << endl;
 		}
 		cout << format("\r %d out of %d were process. (%.2lf%%) ",
 					   imageIndex + 1, fileNames.size(), 100 * ((double) imageIndex + 1) / fileNames.size());
@@ -66,55 +65,54 @@ void readAndExtractFeatures(const char *folderPath, vector<float> &data, vector<
 	cout << endl;
 }
 
-bool trainAndTest() {
-	/*
-	vector<float> test;
-	vector<float> testResponse;
-	vector<float> train;
-	vector<float> trainResponse;
+void trainAndTest() {
+	Mat testMat;
+	Mat trainMat;
+	Mat testResponses;
+	Mat trainResponses;
 
-	readAndExtractFeatures(pathOfTest, test, testResponse);
-	readAndExtractFeatures(pathOfTrain, train, trainResponse);
-
-	cout << endl << format(" Number of train samples: %4zd", testResponse.size());
-	cout << endl << format(" Number of test samples : %4zd", trainResponse.size());
-
-	Mat testMat((int) test.size() / 2, 2, CV_32FC1, &test[0]);
-	Mat trainMat((int) train.size() / 2, 2, CV_32FC1, &train[0]);
-	Mat testResponses((int) testResponse.size(), 1, CV_32FC1, &testResponse[0]);
-	Mat trainResponses((int) trainResponse.size(), 1, CV_32FC1, &trainResponse[0]);
-
-	// To write to file.
-	FileStorage fileWrite("dataMat.xml", cv::FileStorage::WRITE);
-	fileWrite << "testMat" << testMat;
-	fileWrite << "trainMat" << trainMat;
-	fileWrite << "testResponses" << testResponses;
-	fileWrite << "trainResponses" << trainResponses;
-	*/
-
-	
-	// To read from file.
+	//To read from data.xml file.
 	FileStorage fileRead;
-	fileRead.open("dataMat.xml", cv::FileStorage::READ);
+	fileRead.open("data.xml", cv::FileStorage::READ);
 
 	if(!fileRead.isOpened()) {
-		cout << "Failed to open dataMat.xml";
-		return false;
-	}
+		cout << "\n Failed to open data.xml\n";
 
-	Mat testMat, trainMat, testResponses, trainResponses;
-	fileRead["testMat"] >> testMat;
-	fileRead["trainMat"] >> trainMat;
-	fileRead["testResponses"] >> testResponses;
-	fileRead["trainResponses"] >> trainResponses;
-	cout << testMat.rows << " " << trainMat.rows << " " << testResponses.rows << " " << trainResponses.rows;
-	
-	return true;
+		vector<float> test;
+		vector<float> testResponse;
+		vector<float> train;
+		vector<float> trainResponse;
+
+		readAndExtractFeatures(pathOfTest, test, testResponse);
+		readAndExtractFeatures(pathOfTrain, train, trainResponse);
+
+		testMat = Mat((int) test.size() / 2, 2, CV_32FC1, &test[0]);
+		trainMat = Mat((int) train.size() / 2, 2, CV_32FC1, &train[0]);
+		testResponses = Mat((int) testResponse.size(), 1, CV_32FC1, &testResponse[0]);
+		trainResponses = Mat((int) trainResponse.size(), 1, CV_32FC1, &trainResponse[0]);
+
+		// To write to data.xml file.
+		FileStorage fileWrite("data.xml", cv::FileStorage::WRITE);
+		fileWrite << "testMat" << testMat;
+		fileWrite << "trainMat" << trainMat;
+		fileWrite << "testResponses" << testResponses;
+		fileWrite << "trainResponses" << trainResponses;
+		cout << "\n data.xml created";
+	} else {
+		cout << "\n Opened data.xml\n";
+		fileRead["testMat"] >> testMat;
+		fileRead["trainMat"] >> trainMat;
+		fileRead["testResponses"] >> testResponses;
+		fileRead["trainResponses"] >> trainResponses;
+	}
+	cout << format("\n Number of Test Samples: %d"
+				   "\n Number of Train Samples: %d"
+				   "\n Number of Test Response: %d"
+				   "\n Number of Train Response: %d",
+				   testMat.rows, trainMat.rows, testResponses.rows, trainResponses.rows);
 }
 
 int main(int argc, char **argv) {
-	if(!trainAndTest()) {
-		return EXIT_FAILURE;
-	}
+	trainAndTest();
 	return EXIT_SUCCESS;
 }
