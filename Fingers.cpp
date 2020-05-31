@@ -29,7 +29,7 @@ vector<vector<float>> extractFeatures(Mat image) {
 		Mat mask = Mat::zeros(image.rows, image.cols, CV_8UC1);
 		drawContours(mask, contours, i, Scalar(1), FILLED, LINE_8, hierarchy, 1);
 
-		float area = (double) sum(mask)[0];
+		float area = (float) sum(mask)[0];
 		if(area > 500) {
 			RotatedRect rect = minAreaRect(contours[i]);
 			float width = rect.size.width;
@@ -60,12 +60,14 @@ void readAndExtractFeatures(const char *folderPath, vector<float> &data, vector<
 			dataResponse.push_back(fileNames[imageIndex][fileNames[imageIndex].size() - 6]);
 			//cout << features[i][0] << " " << features[i][1] << " " << fileNames[imageIndex][fileNames[imageIndex].size() - 6] << endl;
 		}
-		cout << format("\r %d out of %d were read. (%.2lf%%) ",
+		cout << format("\r %d out of %d were process. (%.2lf%%) ",
 					   imageIndex + 1, fileNames.size(), 100 * ((double) imageIndex + 1) / fileNames.size());
 	}
+	cout << endl;
 }
 
-void trainAndTest() {
+bool trainAndTest() {
+	/*
 	vector<float> test;
 	vector<float> testResponse;
 	vector<float> train;
@@ -76,9 +78,43 @@ void trainAndTest() {
 
 	cout << endl << format(" Number of train samples: %4zd", testResponse.size());
 	cout << endl << format(" Number of test samples : %4zd", trainResponse.size());
+
+	Mat testMat((int) test.size() / 2, 2, CV_32FC1, &test[0]);
+	Mat trainMat((int) train.size() / 2, 2, CV_32FC1, &train[0]);
+	Mat testResponses((int) testResponse.size(), 1, CV_32FC1, &testResponse[0]);
+	Mat trainResponses((int) trainResponse.size(), 1, CV_32FC1, &trainResponse[0]);
+
+	// To write to file.
+	FileStorage fileWrite("dataMat.xml", cv::FileStorage::WRITE);
+	fileWrite << "testMat" << testMat;
+	fileWrite << "trainMat" << trainMat;
+	fileWrite << "testResponses" << testResponses;
+	fileWrite << "trainResponses" << trainResponses;
+	*/
+
+	
+	// To read from file.
+	FileStorage fileRead;
+	fileRead.open("dataMat.xml", cv::FileStorage::READ);
+
+	if(!fileRead.isOpened()) {
+		cout << "Failed to open dataMat.xml";
+		return false;
+	}
+
+	Mat testMat, trainMat, testResponses, trainResponses;
+	fileRead["testMat"] >> testMat;
+	fileRead["trainMat"] >> trainMat;
+	fileRead["testResponses"] >> testResponses;
+	fileRead["trainResponses"] >> trainResponses;
+	cout << testMat.rows << " " << trainMat.rows << " " << testResponses.rows << " " << trainResponses.rows;
+	
+	return true;
 }
 
 int main(int argc, char **argv) {
-	trainAndTest();
-	return EXIT_FAILURE;
+	if(!trainAndTest()) {
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }
