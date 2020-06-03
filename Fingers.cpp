@@ -129,7 +129,7 @@ void trainAndTest() {
 	svm->setKernel(SVM::CHI2);
 	svm->setDegree(1.0);
 	svm->setGamma(2.0);
-	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
+	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 1e3, 1e-6));
 	svm->train(trainData);
 
 	if(testResponses.size().height > 0) {
