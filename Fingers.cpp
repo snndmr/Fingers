@@ -59,7 +59,7 @@ void readAndExtractFeatures(const char *pathOfFolder, vector<float> &data, vecto
 	cout << endl;
 }
 
-bool readFromFile(Mat testMat, Mat trainMat, Mat testResponses, Mat trainResponses) {
+bool readFromFile(Mat &testMat, Mat &trainMat, Mat &testResponses, Mat &trainResponses) {
 	FileStorage fileRead(pathOfDataFile, cv::FileStorage::READ);
 
 	if(fileRead.isOpened()) {
@@ -70,20 +70,12 @@ bool readFromFile(Mat testMat, Mat trainMat, Mat testResponses, Mat trainRespons
 		fileRead["testResponses"] >> testResponses;
 		fileRead["trainResponses"] >> trainResponses;
 
-		cout << format("\n Size of Test Mat: %d"
-					   "\n Size of Train Mat: %d"
-					   "\n Size of Test Responses: %d"
-					   "\n Size of Train Responses: %d",
-					   testMat.size().height,
-					   trainMat.size().height,
-					   testResponses.size().height,
-					   trainResponses.size().height);
 		return true;
 	}
 	return false;
 }
 
-void writeToFile(Mat testMat, Mat trainMat, Mat testResponses, Mat trainResponses) {
+void writeToFile(Mat &testMat, Mat &trainMat, Mat &testResponses, Mat &trainResponses) {
 	cout << format("\n Writing started to %s data file\n", pathOfDataFile);
 
 	FileStorage fileWrite("data.xml", cv::FileStorage::WRITE);
@@ -119,6 +111,13 @@ void trainAndTest() {
 
 		writeToFile(testMat, trainMat, testResponses, trainResponses);
 	}
+
+	cout << format("\n Size of Test Mat: %d"
+				   "\n Size of Train Mat: %d"
+				   "\n Size of Test Responses: %d"
+				   "\n Size of Train Responses: %d",
+				   testMat.size().height, trainMat.size().height,
+				   testResponses.size().height, trainResponses.size().height);
 }
 
 int main(int argc, char **argv) {
