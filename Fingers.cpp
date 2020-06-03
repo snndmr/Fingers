@@ -143,7 +143,7 @@ Ptr<SVM> trainAndTest() {
 	svm->setNu(0.05);
 	svm->setKernel(SVM::CHI2);
 	svm->setDegree(1.0);
-	svm->setGamma(2.0);
+	svm->setGamma(100.0);
 	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 1000, 1e-6));
 	svm->train(trainData);
 
