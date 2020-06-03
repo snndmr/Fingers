@@ -1,8 +1,10 @@
 #include <iostream>
+#include <opencv2/ml.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
 using namespace cv;
+using namespace cv::ml;
 using namespace std;
 
 const char *pathOfDataFile = "data.xml";
@@ -38,7 +40,8 @@ vector<vector<float>> extractFeatures(Mat image) {
 	return output;
 }
 
-void readAndExtractFeatures(const char *pathOfFolder, vector<float> &data, vector<int> &dataResponse) {
+template <class _Ty>
+void readAndExtractFeatures(const char *pathOfFolder, vector<float> &data, vector<_Ty> &dataResponse) {
 	vector<string> fileNames;
 	glob(pathOfFolder, fileNames);
 
@@ -51,7 +54,7 @@ void readAndExtractFeatures(const char *pathOfFolder, vector<float> &data, vecto
 		for(int i = 0; i < features.size(); i++) {
 			data.push_back(features[i][0]);
 			data.push_back(features[i][1]);
-			dataResponse.push_back(fileNames[imageIndex][fileNames[imageIndex].size() - 6] - 48);
+			dataResponse.push_back((_Ty) fileNames[imageIndex][fileNames[imageIndex].size() - 6] - 48);
 		}
 		cout << format("\r %d out of %d were process. (%.2f%%) ",
 					   imageIndex + 1, fileNames.size(), 100 * ((float) imageIndex + 1) / fileNames.size());
@@ -98,7 +101,7 @@ void trainAndTest() {
 
 		vector<float> test;
 		vector<float> train;
-		vector<int> testResponse;
+		vector<float> testResponse;
 		vector<int> trainResponse;
 
 		readAndExtractFeatures(pathOfTest, test, testResponse);
@@ -106,7 +109,7 @@ void trainAndTest() {
 
 		testMat = Mat((int) test.size() / 2, 2, CV_32FC1, &test[0]);
 		trainMat = Mat((int) train.size() / 2, 2, CV_32FC1, &train[0]);
-		testResponses = Mat((int) testResponse.size(), 1, CV_32SC1, testResponse[0]);
+		testResponses = Mat((int) testResponse.size(), 1, CV_32FC1, &testResponse[0]);
 		trainResponses = Mat((int) trainResponse.size(), 1, CV_32SC1, &trainResponse[0]);
 
 		writeToFile(testMat, trainMat, testResponses, trainResponses);
@@ -118,6 +121,24 @@ void trainAndTest() {
 				   "\n Size of Train Responses: %d",
 				   testMat.size().height, trainMat.size().height,
 				   testResponses.size().height, trainResponses.size().height);
+
+	Ptr<TrainData> trainData = TrainData::create(trainMat, ROW_SAMPLE, trainResponses);
+	Ptr<SVM> svm = SVM::create();
+	svm->setType(SVM::C_SVC);
+	svm->setNu(0.05);
+	svm->setKernel(SVM::CHI2);
+	svm->setDegree(1.0);
+	svm->setGamma(2.0);
+	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
+	svm->train(trainData);
+
+	if(testResponses.size().height > 0) {
+		Mat testPredict;
+		svm->predict(testMat, testPredict);
+		Mat errorMat = testPredict != testResponses;
+
+		cout << format("\n\n Error: %.5lf%%\n", 100.0f * countNonZero(errorMat) / testResponses.size().height);
+	}
 }
 
 int main(int argc, char **argv) {
