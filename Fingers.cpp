@@ -7,11 +7,19 @@ using namespace cv;
 using namespace cv::ml;
 using namespace std;
 
+const char *WINDOW_NAME_AFTER = "After";
 const char *pathOfDataFile = "data.xml";
 const char *pathOfTest = "data/test/*.png";
 const char *pathOfTrain = "data/train/*.png";
 
-vector<vector<float>> extractFeatures(Mat image) {
+Mat preprocess(Mat image, int thresholdValue = 90) {
+	Mat output;
+	if(image.channels() == 3) cvtColor(image, output, COLOR_BGR2GRAY);
+	threshold(output, output, thresholdValue, 255, THRESH_BINARY);
+	return output;
+}
+
+vector<vector<float>> extractFeatures(Mat image, vector<int> *xOfCenter = NULL, vector<int> *yOfCenter = NULL) {
 	vector<Vec4i> hierarchy;
 	vector<vector<float>> output;
 	vector<vector<Point>> contours;
@@ -35,6 +43,13 @@ vector<vector<float>> extractFeatures(Mat image) {
 			row.push_back(area);
 			row.push_back(aspectRatio);
 			output.push_back(row);
+
+			if(xOfCenter != NULL) {
+				xOfCenter->push_back((int) rect.center.x);
+			}
+			if(yOfCenter != NULL) {
+				yOfCenter->push_back((int) rect.center.y);
+			}
 		}
 	}
 	return output;
@@ -47,8 +62,8 @@ void readAndExtractFeatures(const char *pathOfFolder, vector<float> &data, vecto
 
 	cout << format("\n Reading started in the %s folder\n", pathOfFolder);
 	for(int imageIndex = 0; imageIndex < fileNames.size(); imageIndex++) {
-		Mat image = imread(fileNames.at(imageIndex), IMREAD_GRAYSCALE);
-		threshold(image, image, 90, 255, THRESH_BINARY);
+		Mat image = imread(fileNames.at(imageIndex));
+		image = preprocess(image);
 
 		vector<vector<float>> features = extractFeatures(image);
 		for(int i = 0; i < features.size(); i++) {
@@ -90,7 +105,7 @@ void writeToFile(Mat &testMat, Mat &trainMat, Mat &testResponses, Mat &trainResp
 	cout << format("\n %s data file created\n", pathOfDataFile);
 }
 
-void trainAndTest() {
+Ptr<SVM> trainAndTest() {
 	Mat testMat;
 	Mat trainMat;
 	Mat testResponses;
@@ -129,7 +144,7 @@ void trainAndTest() {
 	svm->setKernel(SVM::CHI2);
 	svm->setDegree(1.0);
 	svm->setGamma(2.0);
-	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 1e3, 1e-6));
+	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 1000, 1e-6));
 	svm->train(trainData);
 
 	if(testResponses.size().height > 0) {
@@ -139,9 +154,36 @@ void trainAndTest() {
 
 		cout << format("\n\n Error: %.5lf%%\n", 100.0f * countNonZero(errorMat) / testResponses.size().height);
 	}
+	return svm;
 }
 
 int main(int argc, char **argv) {
-	trainAndTest();
+	if(argc != 2) {
+		cout << " You must enter image as an argument" << endl;
+		return EXIT_FAILURE;
+	}
+
+	Mat image = imread(argv[1]);
+
+	if(image.empty()) {
+		cout << "Error loading image " << argv[1] << endl;
+		return EXIT_FAILURE;
+	}
+
+	Ptr<SVM> svm = trainAndTest();
+
+	vector<int> xOfCenter, yOfCenter;
+	vector<vector<float>> features = extractFeatures(preprocess(image, 80), &xOfCenter, &yOfCenter);
+
+	cout << endl << format(" Number of objects detected: %zd", features.size());
+
+	for(int i = 0; i < features.size(); i++) {
+		Mat testMat(1, 2, CV_32FC1, &features[i][0]);
+		float result = svm->predict(testMat);
+		putText(image, format("%.0f", result), Point2d(xOfCenter[i] + 30., yOfCenter[i] - 30.), FONT_HERSHEY_TRIPLEX, .75, Scalar(0, 255, 255));
+	}
+	namedWindow(WINDOW_NAME_AFTER, WINDOW_AUTOSIZE);
+	imshow(WINDOW_NAME_AFTER, image);
+	waitKey(0);
 	return EXIT_SUCCESS;
 }
